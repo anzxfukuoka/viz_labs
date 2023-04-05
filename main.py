@@ -5,6 +5,7 @@ from OpenGL.GL import *
 from OpenGL.GLU import *
 
 from curves import *
+from geometrix import Cube3D
 
 qul = 10
 
@@ -84,6 +85,9 @@ def main():
 
         for bzc in bs2.secondary_curves:
             DrawBz(bzc.verts(), tuple(bzc.edges()))
+
+        cube = Cube3D()
+        cube.draw()
 
         pygame.display.flip()
         pygame.time.wait(10)
