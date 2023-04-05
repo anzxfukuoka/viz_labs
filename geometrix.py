@@ -14,6 +14,8 @@ class Color:
     WHITE = (1, 1, 1)
     BLACK = (0, 0, 0)
 
+    TWILIGHT = (0.26, 0.22, 0.8)
+
 
 class Point:
     """
@@ -58,6 +60,8 @@ class Point:
             raise Exception("Invalid argument {}, type({})".format(z, type(z)))
 
     def __mul__(self, other):
+        if type(other) is Point:
+            return Point(self.x * other.x, self.y * other.y, self.z * other.z)
         return Point(self.x * other, self.y * other, self.z * other)
 
     def __rmul__(self, other):
@@ -96,6 +100,11 @@ class Point:
 
 class Object3D(ABC):
 
+    def __init__(self, pos=Point(0, 0, 0), rot=Point(0, 0, 0), size=Point(1, 1, 1)):
+        self.pos = pos
+        self.rot = rot
+        self.size = size
+
     @abstractmethod
     def get_edges(self):
         """
@@ -131,8 +140,11 @@ class Object3D(ABC):
             for vertex in surface:
                 x += 1
                 # glColor3fv(colors[x])
-                glColor3fv(Color.GREEN)
-                glVertex3fv(vertexes[vertex])
+                #color = (lambda: Color.GREEN if vertex % 2 == 0 else Color.RED if vertex % 3 == 0 else Color.BLUE)()
+                color = Color.TWILIGHT
+                glColor3fv(color)
+                point = self.pos + vertexes[vertex] * self.size
+                glVertex3fv(point.to_list())
         glEnd()
 
         glColor3fv(Color.WHITE)
@@ -140,7 +152,8 @@ class Object3D(ABC):
         glBegin(GL_LINES)
         for edge in edges:
             for vertex in edge:
-                glVertex3fv(vertexes[vertex])
+                point = self.pos + vertexes[vertex] * self.size
+                glVertex3fv(point.to_list())
         glEnd()
 
     pass
@@ -178,13 +191,13 @@ class Cube3D(Object3D):
 
     def get_verts(self):
         vertexes = (
-            (1, -1, -1),
-            (1, 1, -1),
-            (-1, 1, -1),
-            (-1, -1, -1),
-            (1, -1, 1),
-            (1, 1, 1),
-            (-1, -1, 1),
-            (-1, 1, 1)
+            Point(1, -1, -1),
+            Point(1, 1, -1),
+            Point(-1, 1, -1),
+            Point(-1, -1, -1),
+            Point(1, -1, 1),
+            Point(1, 1, 1),
+            Point(-1, -1, 1),
+            Point(-1, 1, 1)
         )
         return vertexes

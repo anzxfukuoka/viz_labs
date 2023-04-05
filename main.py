@@ -10,24 +10,26 @@ from geometrix import Cube3D
 qul = 10
 
 # view 1
-bz = BezierCurve([Point(0, 0, "xz", depth=8), Point(2, 0, "xz", depth=8), Point(3, 2, "xz", depth=8)],quality=qul)
+bz = BezierCurve([Point(0, 0, "xz", depth=8), Point(2, 0, "xz", depth=8), Point(3, 2, "xz", depth=8)], quality=qul)
 bz2 = BezierCurve([Point(3, 2, "xz", depth=8), Point(4, 5, "xz", depth=8), Point(4, 8, "xz", depth=8)], quality=qul)
 
-bz_mid = BezierCurve([Point(0, 1, "xz", depth=8), Point(2, 1, "xz", depth=8), Point(3, 3, "xz", depth=4)], quality=qul)
+bz_mid = BezierCurve([Point(0, 1, "xz", depth=4), Point(2, 1, "xz", depth=4), Point(3, 3, "xz", depth=4)], quality=qul)
 
 # view 2
 bz3 = BezierCurve([Point(0, 1, "xz", depth=0), Point(6, 1, "xz", depth=0), Point(8, 0, "xz", depth=0)], quality=qul)
 bz4 = BezierCurve([Point(8, 0, "xz", depth=0), Point(5, 2, "xz", depth=0), Point(5, 8, "xz", depth=0)], quality=qul)
 
-bz_mid2 = BezierCurve([Point(2, 2, "xz", depth=8), Point(3, 5, "xz", depth=8), Point(3, 8, "xz", depth=4)], quality=qul)
+bz_mid2 = BezierCurve([Point(2, 2, "xz", depth=4), Point(3, 5, "xz", depth=4), Point(3, 8, "xz", depth=4)], quality=qul)
 
 # surf
 
-bs1 = BezierSurface([bz, bz_mid, bz3], last=False)
-bs2 = BezierSurface([bz2, bz_mid2, bz4], last=True)
+bs1 = BezierSurface([bz, bz_mid, bz3], last=True, quality=qul)
+bs2 = BezierSurface([bz2, bz_mid2, bz4], last=True, quality=qul)
 
-verticies = tuple([(p.x, p.y, p.z) for p in bz.verts()])
-edges = tuple(bz.edges())
+bs3 = BezierSurface([bz, bz_mid, bz3], last=True, quality=qul)
+bs3.size = Point(-1, 1, 1)
+bs4 = BezierSurface([bz2, bz_mid2, bz4], last=True, quality=qul)
+bs4.size = Point(-1, 1, 1)
 
 
 def DrawBz(verts, edges):
@@ -40,14 +42,6 @@ def DrawBz(verts, edges):
         for vertex in line:
             glVertex3fv(vertexes[vertex])
             # glVertex3fv(np.array(vertexes[vertex]) * 0.8)
-    glEnd()
-
-
-def Cube():
-    glBegin(GL_LINES)
-    for edge in edges:
-        for vertex in edge:
-            glVertex3fv(verticies[vertex])
     glEnd()
 
 
@@ -74,20 +68,19 @@ def main():
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)
         # Cube()
 
+        bz.draw()
+        bz2.draw()
+        bz3.draw()
+        bz4.draw()
 
-        DrawBz(bz.verts(), tuple(bz.edges()))
-        DrawBz(bz2.verts(), tuple(bz2.edges()))
-        DrawBz(bz3.verts(), tuple(bz3.edges()))
-        DrawBz(bz4.verts(), tuple(bz4.edges()))
+        bs1.draw()
+        bs2.draw()
+        bs3.draw()
+        bs4.draw()
 
-        for bzc in bs1.secondary_curves:
-            DrawBz(bzc.verts(), tuple(bzc.edges()))
-
-        for bzc in bs2.secondary_curves:
-            DrawBz(bzc.verts(), tuple(bzc.edges()))
-
-        cube = Cube3D()
-        cube.draw()
+        """for v in bs1.get_verts():
+            cube = Cube3D(pos=v, size=Point(0.1, 0.1, 0.1))
+            cube.draw()"""
 
         pygame.display.flip()
         pygame.time.wait(10)
