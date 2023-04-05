@@ -140,7 +140,7 @@ class Object3D(ABC):
             for vertex in surface:
                 x += 1
                 # glColor3fv(colors[x])
-                #color = (lambda: Color.GREEN if vertex % 2 == 0 else Color.RED if vertex % 3 == 0 else Color.BLUE)()
+                # color = (lambda: Color.GREEN if vertex % 2 == 0 else Color.RED if vertex % 3 == 0 else Color.BLUE)()
                 color = Color.TWILIGHT
                 glColor3fv(color)
                 point = self.pos + vertexes[vertex] * self.size
@@ -201,3 +201,12 @@ class Cube3D(Object3D):
             Point(-1, 1, 1)
         )
         return vertexes
+
+
+class Composed():
+    def __init__(self, objects: list[Object3D] | np.ndarray = []):
+        self.objects = objects
+
+    def drawAll(self):
+        for o in self.objects:
+            o.draw()

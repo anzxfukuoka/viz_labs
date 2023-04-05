@@ -5,7 +5,7 @@ from OpenGL.GL import *
 from OpenGL.GLU import *
 
 from curves import *
-from geometrix import Cube3D
+from geometrix import Cube3D, Composed
 
 qul = 10
 
@@ -30,6 +30,8 @@ bs3 = BezierSurface([bz, bz_mid, bz3], last=True, quality=qul)
 bs3.size = Point(-1, 1, 1)
 bs4 = BezierSurface([bz2, bz_mid2, bz4], last=True, quality=qul)
 bs4.size = Point(-1, 1, 1)
+
+bsSurface = Composed([bs1, bs2, bs3, bs4])
 
 
 def DrawBz(verts, edges):
@@ -58,13 +60,22 @@ def main():
 
     glRotatef(-90, 1, 0, 0)
 
+    x_axis = 0
+    y_axis = 0
+    speed = 2
+
     while True:
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 pygame.quit()
                 quit()
+        keys = pygame.key.get_pressed()
+        x_axis = (keys[pygame.K_RIGHT] - keys[pygame.K_LEFT]) * speed
+        y_axis = (keys[pygame.K_DOWN] - keys[pygame.K_UP]) * speed
 
-        glRotatef(1, 0, 0, 1)
+        glRotatef(x_axis, 0, 0, 1)
+        glRotatef(y_axis, 1, 0, 0)
+
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)
         # Cube()
 
@@ -73,14 +84,7 @@ def main():
         bz3.draw()
         bz4.draw()
 
-        bs1.draw()
-        bs2.draw()
-        bs3.draw()
-        bs4.draw()
-
-        """for v in bs1.get_verts():
-            cube = Cube3D(pos=v, size=Point(0.1, 0.1, 0.1))
-            cube.draw()"""
+        bsSurface.drawAll()
 
         pygame.display.flip()
         pygame.time.wait(10)
