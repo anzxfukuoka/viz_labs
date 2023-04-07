@@ -1,10 +1,13 @@
+import math
 from abc import ABC, abstractmethod
 
 import numpy as np
 from OpenGL.GL import *
+from OpenGL.GL import shaders
 from OpenGL.GLU import *
+from OpenGL.arrays import vbo
 
-from misc import try_cast
+from misc import try_cast, load_file
 
 
 class Color:
@@ -98,12 +101,159 @@ class Point:
         return Point(coords[0], coords[1], coords[2])
 
 
+class Transform:
+    def __init__(self, position=[0, 0, 0], rotation=[0, 0, 0], size=[1, 1, 1]):
+        self.position = position
+        self.rotation = rotation
+        self.size = size
+        pass
+
+    def local_to_global(self, v3):
+        v4 = np.array(v3 + [1])
+        scaled_v = np.dot(self._scale_matrix(), v4)
+        rmx, rmy, rmz = self._rotation_matrix()
+        rotated_vx = np.dot(rmx, scaled_v)
+        rotated_vy = np.dot(rmy, rotated_vx)
+        rotated_vz = np.dot(rmz, rotated_vy)
+        translated_v = np.dot(self._translate_matrix(), rotated_vz)
+        transformed_v = translated_v[:-1]
+
+        return transformed_v
+
+    def _translate_matrix(self):
+        mx = np.array([[1, 0, 0, self.position[0]],
+                       [0, 1, 0, self.position[1]],
+                       [0, 0, 1, self.position[2]],
+                       [0, 0, 0,               1]])
+        return mx
+
+    def _rotation_matrix(self):
+        x, y, z = [math.radians(rot_deg) for rot_deg in self.rotation]
+
+        rmz = np.array([[math.cos(z), -math.sin(z), 0, 0],
+                        [math.sin(z), math.cos(z),  0, 0],
+                        [0, 0,                      1, 0],
+                        [0, 0,                      0, 1]])
+
+        rmx = np.array([[1, 0, 0,                      0],
+                        [0, math.cos(x), -math.sin(x), 0],
+                        [0, math.sin(x), math.cos(x),  0],
+                        [0, 0, 0,                      1]])
+
+
+        rmy = np.array([[math.cos(y),  0, math.sin(y), 0],
+                        [0,            1,           0, 0],
+                        [-math.sin(y), 0, math.cos(y), 0],
+                        [0,            0,           0, 1]])
+
+        return rmy, rmx, rmz
+
+    def _scale_matrix(self):
+        mx = np.array([[self.size[0], 0, 0, 0],
+                       [0, self.size[1], 0, 0],
+                       [0, 0, self.size[2], 0],
+                       [0, 0, 0,            1]])
+        return mx
+
+
 class Object3D(ABC):
 
-    def __init__(self, pos=Point(0, 0, 0), rot=Point(0, 0, 0), size=Point(1, 1, 1)):
-        self.pos = pos
-        self.rot = rot
-        self.size = size
+    def _compile_shader(self):
+        VERTEX_SHADER = load_file("vertex_shader.vsh")
+        FRAGMENT_SHADER = load_file("fragment_shader.fsh")
+
+        compiled_vertex_shader = shaders.compileShader(VERTEX_SHADER, GL_VERTEX_SHADER)
+        compiled_fragment_shader = shaders.compileShader(FRAGMENT_SHADER, GL_FRAGMENT_SHADER)
+
+        shader = shaders.compileProgram(compiled_vertex_shader, compiled_fragment_shader)
+
+        vertexes = np.array([p.to_list() for p in self.get_verts()], dtype=np.float32)
+
+        self.vbo = vbo.VBO(vertexes)
+
+        # get memory locations for
+        # shader uniform variables
+        uniform_values = (
+            'Global_ambient',
+            'Light_ambient',
+            'Light_diffuse',
+            'Light_location',
+            'Material_ambient',
+            'Material_diffuse'
+        )
+        for uniform in uniform_values:
+            location = glGetUniformLocation(shader, uniform)
+            if location in (None, -1):
+                print('Warning, no uniform {}'.format(uniform))
+            else:
+                set_attrib = uniform + '_loc'
+                setattr(self, set_attrib, location)
+
+        # get the memory locations for
+        # shader attribute variables
+        attribute_values = (
+            'Vertex_position'
+            , 'Vertex_normal'
+        )
+        for attribute in attribute_values:
+            location = glGetAttribLocation(shader, attribute)
+            if location in (None, -1):
+                print('Warning, no attribute {}'.format(attribute))
+            else:
+                set_attrib = attribute + '_loc'
+                setattr(self, set_attrib, location)
+
+        return shader
+
+    def apply_material(self):
+
+        if len(self.get_surfs()) == 0:
+            return
+
+        self.shader = self._compile_shader()
+        glUseProgram(self.shader)
+        try:
+            # bind data into gpu
+            self.vbo.bind()
+            try:
+                # tells opengl to access vertex once
+                # we call a draw function
+                glEnableClientState(GL_VERTEX_ARRAY)
+                # point at our vbo data
+                glVertexPointerf(self.vbo)
+                # actually tell opengl to draw
+                # the stuff in the VBO as a series
+                # of triangles
+                glDrawArrays(GL_TRIANGLES, 0, len(self.get_verts()))
+            finally:
+                # cleanup, unbind the our data from gpu ram
+                # and tell opengl that it should not
+                # expect vertex arrays anymore
+                self.vbo.unbind()
+                glDisableClientState(GL_VERTEX_ARRAY)
+        finally:
+            # stop using our shader
+            glUseProgram(0)
+
+    def __init__(self):
+        self.shader = None
+        self.transform = Transform()
+
+    def get_normals(self):
+        """
+        normal vectors for each point
+        :return:
+        """
+        surfs = self.get_surfs()
+        verts = self.get_verts()
+        norms = []
+        for s in surfs:
+            v1 = verts[s[2]] - verts[s[0]]
+            v2 = verts[s[1]] - verts[s[0]]
+            norm = np.cross(v1.to_list(), v2.to_list())
+            norm = norm / np.linalg.norm(norm)  # normalized
+            norms.append((norm[0], norm[1], norm[2]))
+        return norms
 
     @abstractmethod
     def get_edges(self):
@@ -133,15 +283,14 @@ class Object3D(ABC):
         vertexes = self.get_verts()
         edges = self.get_edges()
         surfaces = self.get_surfs()
+        normals = self.get_normals()
+
+        self.apply_material()
 
         glBegin(GL_TRIANGLES)
-        for surface in surfaces:
-            x = 0
 
-            ps = np.array([vertexes[p].to_list() for p in surface])
-            v1 = ps[2] - ps[0]
-            v2 = ps[1] - ps[0]
-            norm = np.cross(v1, v2)
+        for i, surface in enumerate(surfaces):
+            x = 0
 
             for vertex in surface:
                 x += 1
@@ -149,18 +298,36 @@ class Object3D(ABC):
                 # color = (lambda: Color.GREEN if vertex % 2 == 0 else Color.RED if vertex % 3 == 0 else Color.BLUE)()
                 color = Color.TWILIGHT
                 glColor3fv(color)
-                glNormal(norm[0], norm[1], norm[2])
-                point = self.pos + vertexes[vertex] * self.size
-                glVertex3fv(point.to_list())
+                nx, ny, nz = normals[i]
+                glNormal(nx, ny, nz)
+                #point = self.pos + vertexes[vertex] * self.size
+                v = vertexes[vertex].to_list()
+                point = self.transform.local_to_global(v)
+                #glVertex3fv(point.to_list())
+                glVertex3fv(point)
         glEnd()
 
         glColor3fv(Color.WHITE)
 
         glBegin(GL_LINES)
+
         for edge in edges:
             for vertex in edge:
-                point = self.pos + vertexes[vertex] * self.size
-                glVertex3fv(point.to_list())
+                #point = self.pos + vertexes[vertex] * self.size
+                #point = vertexes[vertex]
+                v = vertexes[vertex].to_list()
+                point = self.transform.local_to_global(v)
+                #glVertex3fv(point.to_list())
+                glVertex3fv(point)
+
+        # for i, surface in enumerate(surfaces):
+        #     nx, ny, nz = normals[i]
+        #     center = self.pos + vertexes[surfaces[i][0]]
+        #     norm = self.pos + center + Point(nx, ny, nz)
+        #
+        #     glVertex3fv(center.to_list())
+        #     glVertex3fv(norm.to_list())
+
         glEnd()
 
     pass
@@ -211,9 +378,16 @@ class Cube3D(Object3D):
 
 
 class Composed():
+
+    def set_material_all(self):
+        for o in self.objects:
+            o.set_material()
+
     def __init__(self, objects: list[Object3D] | np.ndarray = []):
+        self.transform = Transform()
         self.objects = objects
 
-    def drawAll(self):
+    def draw_all(self):
         for o in self.objects:
+            o.transform = self.transform
             o.draw()
