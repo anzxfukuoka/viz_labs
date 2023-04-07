@@ -153,9 +153,11 @@ class Transform:
 
 class Object3D(ABC):
 
-    def __init__(self, transform=None):
+    def __init__(self, transform=None, parent_transform=None):
         if transform is None:
             self.transform = Transform()
+
+        self.parent_transform = parent_transform
 
         self.material = None
 
@@ -182,10 +184,17 @@ class Object3D(ABC):
         # vertexes = np.array([p.to_list() for p in self.get_verts()], dtype=np.float32)
 
         vertexes = np.array([p.to_list() for p in self.vertexes], dtype=np.float32)
-        normals = np.array([np.append(n, 1) for n in self.normals], dtype=np.float32)
-        colors = np.array([np.append(c, 1) for c in self.colors], dtype=np.float32)
+        vertexes = np.array([self.transform.local_to_global(v) for v in vertexes], dtype=np.float32)
+        if self.parent_transform:
+            vertexes = np.array([self.parent_transform.local_to_global(v) for v in vertexes], dtype=np.float32)
+
+        normals = np.array([n for n in self.normals], dtype=np.float32)
+        colors = np.array([c for c in self.colors], dtype=np.float32)
 
         indexes = np.array(self.surfaces, dtype=np.uint32).flatten()
+
+        vert_data = np.append(vertexes, normals)
+        vert_data = np.append(vert_data, colors)
 
         VAO = glGenVertexArrays(1)
         VBO = glGenBuffers(1)
@@ -194,13 +203,22 @@ class Object3D(ABC):
         glBindVertexArray(VAO)
 
         glBindBuffer(GL_ARRAY_BUFFER, VBO)
-        glBufferData(GL_ARRAY_BUFFER, vertexes, GL_STATIC_DRAW)
+        #glBufferData(GL_ARRAY_BUFFER, vertexes, GL_STATIC_DRAW)
+        glBufferData(GL_ARRAY_BUFFER, vert_data, GL_STATIC_DRAW)
 
         glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO)
         glBufferData(GL_ELEMENT_ARRAY_BUFFER, indexes, GL_STATIC_DRAW)
 
-        glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, None)
-        glEnableVertexAttribArray(0)
+        #glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, None)
+        #glEnableVertexAttribArray(0)
+
+        glEnableVertexAttribArray(self.material.Vertex_position_loc)
+        glEnableVertexAttribArray(self.material.Vertex_normal_loc)
+
+        glVertexAttribPointer(self.material.Vertex_position_loc,
+                              3, GL_FLOAT, GL_FALSE, 0, None)
+        glVertexAttribPointer(self.material.Vertex_normal_loc,
+                              3, GL_FLOAT, GL_FALSE, 0, None)
 
         glBindBuffer(GL_ARRAY_BUFFER, 0)
         glBindVertexArray(0)
@@ -213,7 +231,7 @@ class Object3D(ABC):
                 # use the memory locations we found earlier (now python attributes
                 # on the current class) for shader variables and put data into
                 # the shader variables
-                glUniform4f(self.material.Global_ambient_loc, .3, .05, .05, .1)
+                glUniform4f(self.material.Global_ambient_loc, .05, .1, .05, .1)
                 glUniform4f(self.material.Light_ambient_loc, .2, .2, .2, 1.0)
                 glUniform4f(self.material.Light_diffuse_loc, 1, 1, 1, 1)
                 glUniform3f(self.material.Light_location_loc, 2, 2, 10)
@@ -315,9 +333,11 @@ class Object3D(ABC):
         """
         pass
 
-    def draw(self, parent_transform=None, draw_warframe=False):
+    def draw(self, draw_warframe=False):
 
         self.apply_material()
+
+        return
 
         glBegin(GL_TRIANGLES)
 
@@ -334,8 +354,8 @@ class Object3D(ABC):
                 # point = self.pos + vertexes[vertex] * self.size
                 v = self.vertexes[vertex].to_list()
                 point = self.transform.local_to_global(v)
-                if parent_transform:
-                    point = parent_transform.local_to_global(point)
+                if self.parent_transform:
+                    point = self.parent_transform.local_to_global(point)
                 # glVertex3fv(point.to_list())
                 glVertex3fv(point)
         glEnd()
@@ -443,9 +463,12 @@ class Composed:
         self.transform = Transform()
         self.objects = objects
 
+        for o in self.objects:
+            o.parent_transform = self.transform
+
     def draw_all(self):
         for o in self.objects:
-            o.draw(self.transform)
+            o.draw()
 
     def set_material_all(self, material):
         for o in self.objects:
