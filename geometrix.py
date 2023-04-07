@@ -164,6 +164,19 @@ class Transform:
 
 class Object3D(ABC):
 
+    def __init__(self, transform=None):
+        self.shader = None
+
+        if transform is None:
+            self.transform = Transform()
+
+        self.vertexes = self.set_verts()
+        self.edges = self.set_edges()
+        self.surfaces = self.set_surfs()
+        self.normals = self.calc_normals()
+        # color = (lambda: Color.GREEN if vertex % 2 == 0 else Color.RED if vertex % 3 == 0 else Color.BLUE)()
+        self.colors = np.array([Color.TWILIGHT] * len(self.vertexes))
+
     def _compile_shader(self):
         VERTEX_SHADER = load_file("vertex_shader.vsh")
         FRAGMENT_SHADER = load_file("fragment_shader.fsh")
@@ -259,26 +272,15 @@ class Object3D(ABC):
         finally:
             glUseProgram(0)
 
-    def __init__(self, transform=None):
-        self.shader = None
-
-        if transform is None:
-            self.transform = Transform()
-
-        self.vertexes = self.set_verts()
-        self.edges = self.set_edges()
-        self.surfaces = self.set_surfs()
-        self.normals = self.calc_verts_normals()
-
-    def calc_verts_normals(self):
+    def calc_normals(self):
         """
         normal vectors for each vertex
         :return:
         """
-        surfs = self.set_surfs()
-        verts = self.set_verts()
+        surfs = self.surfaces
+        verts = self.vertexes
 
-        verts_count = len(self.set_verts())
+        verts_count = len(self.vertexes)
         a = [np.array([])] * verts_count
         vert_norms = []
 
@@ -301,22 +303,6 @@ class Object3D(ABC):
             vert_norms.append(vert_norm)
 
         return np.array(vert_norms)
-
-    '''def get_normals(self):
-        """
-        normal vectors for each surface
-        :return:
-        """
-        surfs = self.get_surfs()
-        verts = self.get_verts()
-        norms = []
-        for s in surfs:
-            v1 = verts[s[2]] - verts[s[0]]
-            v2 = verts[s[1]] - verts[s[0]]
-            norm = np.cross(v1.to_list(), v2.to_list())
-            norm = norm / np.linalg.norm(norm)  # normalized
-            norms.append((norm[0], norm[1], norm[2]))
-        return norms'''
 
     @abstractmethod
     def set_edges(self):
@@ -342,7 +328,7 @@ class Object3D(ABC):
         """
         pass
 
-    def draw(self, parent_transform=None):
+    def draw(self, parent_transform=None, draw_warframe=False):
 
         self.apply_material()
 
@@ -353,10 +339,8 @@ class Object3D(ABC):
 
             for vertex in surface:
                 x += 1
-                # glColor3fv(colors[x])
-                # color = (lambda: Color.GREEN if vertex % 2 == 0 else Color.RED if vertex % 3 == 0 else Color.BLUE)()
-                color = Color.TWILIGHT
-                # glColor3fv(color)
+                color = self.colors[vertex]
+                glColor3fv(color)
 
                 nx, ny, nz = self.normals[vertex]
                 glNormal(nx, ny, nz)
@@ -368,6 +352,9 @@ class Object3D(ABC):
                 # glVertex3fv(point.to_list())
                 glVertex3fv(point)
         glEnd()
+
+        if not draw_warframe:
+            return
 
         glColor3fv(Color.WHITE)
 
@@ -403,6 +390,9 @@ class Object3D(ABC):
 
 
 class Cube3D(Object3D):
+    """
+    Cube primitive object
+    """
 
     def __init__(self):
         super(Cube3D, self).__init__()
@@ -427,22 +417,22 @@ class Cube3D(Object3D):
     def set_surfs(self):
         surfaces = (
             (0, 1, 2),
-            (2, 1, 3),
+            (2, 3, 0),
 
             (3, 2, 7),
-            (7, 2, 6),
+            (7, 6, 3),
 
             (6, 7, 5),
-            (5, 7, 4),
+            (5, 4, 6),
 
             (4, 5, 1),
-            (1, 5, 0),
+            (1, 0, 4),
 
             (1, 5, 7),
-            (7, 5, 2),
+            (7, 2, 1),
 
             (4, 0, 3),
-            (3, 0, 6)
+            (3, 6, 4)
         )
         return surfaces
 
