@@ -9,17 +9,17 @@ class BezierCurve(Object3D):
     control_points: array of Points np.array(type=Point)
     """
 
-    def get_edges(self):
+    def set_edges(self):
         return zip(range(self.quality), range(1, self.quality + 1))
 
-    def get_verts(self):
+    def set_verts(self):
         step = 1 / self.quality
         vertexes = []
         for i in range(self.quality + 1):
             vertexes.append(self.B(i * step))
         return vertexes
 
-    def get_surfs(self):
+    def set_surfs(self):
         return []
 
     def B(self, t: float):
@@ -41,7 +41,6 @@ class BezierCurve(Object3D):
         :param weights: points weights
         :param quality: count of interpolated points
         """
-        super(BezierCurve, self).__init__()
         self.control_points = control_points
 
         if weights:
@@ -50,6 +49,8 @@ class BezierCurve(Object3D):
             self.weights = np.ones(len(control_points))
 
         self.quality = quality
+
+        super(BezierCurve, self).__init__()
 
     def __len__(self):
         """
@@ -61,7 +62,7 @@ class BezierCurve(Object3D):
 
 class BezierSurface(Object3D):
 
-    def get_edges(self):
+    def set_edges(self):
         curves_count = len(self.secondary_curves)
         edges = []
 
@@ -78,7 +79,7 @@ class BezierSurface(Object3D):
 
         return edges
 
-    def get_verts(self):
+    def set_verts(self):
         step = 1 / self.quality
         vertexes = []
         for curve in self.secondary_curves:
@@ -86,7 +87,7 @@ class BezierSurface(Object3D):
                 vertexes.append(curve.B(i * step))
         return vertexes
 
-    def get_surfs(self):
+    def set_surfs(self):
         curves_count = len(self.secondary_curves)
         surfs = []
 
@@ -135,7 +136,6 @@ class BezierSurface(Object3D):
         :param count: secondary curves count. non-positive value: count = len(curves)
         :param last: create last curve
         """
-        super(BezierSurface, self).__init__()
         self.curves = curves
         self.quality = quality
         self.last = last
@@ -156,6 +156,8 @@ class BezierSurface(Object3D):
                 points.append(self.curves[j].B(i / curves_count))
 
             self.secondary_curves.append(BezierCurve(points, quality=quality))
+
+        super(BezierSurface, self).__init__()
 
     def verts(self):
         step = 1 / self.quality

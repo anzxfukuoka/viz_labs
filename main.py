@@ -118,7 +118,8 @@ def main():
         light_cube.draw()
 
         # anim
-        a_pos = anim_curve.B(math.sin(pygame.time.get_ticks() * anim_speed)).to_list()
+        anim_curve.draw()
+        a_pos = anim_curve.B(math.sin(pygame.time.get_ticks() * anim_speed) * 0.5 + 0.5).to_list()
 
         bsSurface.transform.position = a_pos
 

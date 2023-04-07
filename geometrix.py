@@ -173,8 +173,11 @@ class Object3D(ABC):
 
         shader = shaders.compileProgram(compiled_vertex_shader, compiled_fragment_shader)
 
-        #vertexes = np.array([p.to_list() for p in self.get_verts()], dtype=np.float32)
-        vertexes = np.array([p.to_list() + [0, 0, 0] for p in self.get_verts()], dtype=np.float32)
+        # vertexes = np.array([p.to_list() for p in self.get_verts()], dtype=np.float32)
+        vertexes = np.array([p.to_list() + [0, 0, 0] for p in self.set_verts()], dtype=np.float32)
+        # normals = self.get_verts_normals()
+
+        # vbo = np.append(vertexes, normals, axis=1)
 
         self.vbo = vbo.VBO(vertexes)
 
@@ -200,7 +203,7 @@ class Object3D(ABC):
         # shader attribute variables
         attribute_values = (
             'Vertex_position'
-            ,'Vertex_normal'
+            , 'Vertex_normal'
         )
         for attribute in attribute_values:
             location = glGetAttribLocation(shader, attribute)
@@ -214,7 +217,7 @@ class Object3D(ABC):
 
     def apply_material(self):
 
-        if len(self.get_surfs()) == 0:
+        if len(self.set_surfs()) == 0:
             return
 
         self.shader = self._compile_shader()
@@ -246,7 +249,7 @@ class Object3D(ABC):
                     3, GL_FLOAT, False, stride, self.vbo + 12
                 )
 
-                trns_count = len(self.get_surfs())
+                trns_count = len(self.set_surfs())
 
                 glDrawArrays(GL_TRIANGLES, 0, trns_count)
             finally:
@@ -258,12 +261,50 @@ class Object3D(ABC):
 
     def __init__(self, transform=None):
         self.shader = None
+
         if transform is None:
             self.transform = Transform()
 
-    def get_normals(self):
+        self.vertexes = self.set_verts()
+        self.edges = self.set_edges()
+        self.surfaces = self.set_surfs()
+        self.normals = self.calc_verts_normals()
+
+    def calc_verts_normals(self):
         """
-        normal vectors for each point
+        normal vectors for each vertex
+        :return:
+        """
+        surfs = self.set_surfs()
+        verts = self.set_verts()
+
+        verts_count = len(self.set_verts())
+        a = [np.array([])] * verts_count
+        vert_norms = []
+
+        for i in range(verts_count):
+
+            vert_norm = []
+
+            for surf in surfs:
+
+                v1 = verts[surf[2]] - verts[surf[0]]
+                v2 = verts[surf[1]] - verts[surf[0]]
+                norm = np.cross(v1.to_list(), v2.to_list())
+                norm = norm / np.linalg.norm(norm)  # normalized
+
+                if i in surf:
+                    vert_norm.append(norm)
+
+            vert_norm = np.array(vert_norm)
+            vert_norm = vert_norm.sum(axis=0)
+            vert_norms.append(vert_norm)
+
+        return np.array(vert_norms)
+
+    '''def get_normals(self):
+        """
+        normal vectors for each surface
         :return:
         """
         surfs = self.get_surfs()
@@ -275,10 +316,10 @@ class Object3D(ABC):
             norm = np.cross(v1.to_list(), v2.to_list())
             norm = norm / np.linalg.norm(norm)  # normalized
             norms.append((norm[0], norm[1], norm[2]))
-        return norms
+        return norms'''
 
     @abstractmethod
-    def get_edges(self):
+    def set_edges(self):
         """
         edges indexes
         :return:
@@ -286,7 +327,7 @@ class Object3D(ABC):
         pass
 
     @abstractmethod
-    def get_verts(self):
+    def set_verts(self):
         """
         vertexes
         :return:
@@ -294,7 +335,7 @@ class Object3D(ABC):
         pass
 
     @abstractmethod
-    def get_surfs(self):
+    def set_surfs(self):
         """
         surfaces indexes
         :return:
@@ -303,16 +344,11 @@ class Object3D(ABC):
 
     def draw(self, parent_transform=None):
 
-        vertexes = self.get_verts()
-        edges = self.get_edges()
-        surfaces = self.get_surfs()
-        normals = self.get_normals()
-
         self.apply_material()
 
         glBegin(GL_TRIANGLES)
 
-        for i, surface in enumerate(surfaces):
+        for i, surface in enumerate(self.surfaces):
             x = 0
 
             for vertex in surface:
@@ -320,11 +356,12 @@ class Object3D(ABC):
                 # glColor3fv(colors[x])
                 # color = (lambda: Color.GREEN if vertex % 2 == 0 else Color.RED if vertex % 3 == 0 else Color.BLUE)()
                 color = Color.TWILIGHT
-                #glColor3fv(color)
-                nx, ny, nz = normals[i]
+                # glColor3fv(color)
+
+                nx, ny, nz = self.normals[vertex]
                 glNormal(nx, ny, nz)
                 # point = self.pos + vertexes[vertex] * self.size
-                v = vertexes[vertex].to_list()
+                v = self.vertexes[vertex].to_list()
                 point = self.transform.local_to_global(v)
                 if parent_transform:
                     point = parent_transform.local_to_global(point)
@@ -336,11 +373,11 @@ class Object3D(ABC):
 
         glBegin(GL_LINES)
 
-        for edge in edges:
+        for edge in self.edges:
             for vertex in edge:
                 # point = self.pos + vertexes[vertex] * self.size
                 # point = vertexes[vertex]
-                v = vertexes[vertex].to_list()
+                v = self.vertexes[vertex].to_list()
                 point = self.transform.local_to_global(v)
                 if parent_transform:
                     point = parent_transform.local_to_global(point)
@@ -370,7 +407,7 @@ class Cube3D(Object3D):
     def __init__(self):
         super(Cube3D, self).__init__()
 
-    def get_edges(self):
+    def set_edges(self):
         edges = (
             (0, 1),
             (0, 3),
@@ -387,7 +424,7 @@ class Cube3D(Object3D):
         )
         return edges
 
-    def get_surfs(self):
+    def set_surfs(self):
         surfaces = (
             (0, 1, 2),
             (2, 1, 3),
@@ -409,7 +446,7 @@ class Cube3D(Object3D):
         )
         return surfaces
 
-    def get_verts(self):
+    def set_verts(self):
         vertexes = (
             Point(1, -1, -1),
             Point(1, 1, -1),
