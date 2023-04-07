@@ -1,15 +1,15 @@
 #version 120
 // #version 330
 
-    uniform vec4 Global_ambient;
-        uniform vec4 Light_ambient;
-        uniform vec4 Light_diffuse;
-        uniform vec3 Light_location;
-        uniform vec4 Material_ambient;
-        uniform vec4 Material_diffuse;
-        attribute vec3 Vertex_position;
-        attribute vec3 Vertex_normal;
-        varying vec4 baseColor;
+uniform vec4 Global_ambient;
+uniform vec4 Light_ambient;
+uniform vec4 Light_diffuse;
+uniform vec3 Light_location;
+uniform vec4 Material_ambient;
+uniform vec4 Material_diffuse;
+attribute vec3 Vertex_position;
+attribute vec3 Vertex_normal;
+varying vec4 baseColor;
 
 float phong_weightCalc(
             in vec3 light_pos,
@@ -49,4 +49,5 @@ float phong_weightCalc(
             // interaction with direct light
             +(Light_diffuse * Material_diffuse * diffuse_weight)
             ), 0.0, 1.0);
-        }
+            //baseColor = vec4(1.0f, 0.0f, 0.0f, 1.0f);
+ }

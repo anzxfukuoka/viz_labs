@@ -3,21 +3,10 @@ from abc import ABC, abstractmethod
 
 import numpy as np
 from OpenGL.GL import *
-from OpenGL.GL import shaders
-from OpenGL.GLU import *
 from OpenGL.arrays import vbo
 
+from lightning import Color, BRDF
 from misc import try_cast, load_file
-
-
-class Color:
-    RED = (1, 0, 0)
-    GREEN = (0, 1, 0)
-    BLUE = (0, 1, 1)
-    WHITE = (1, 1, 1)
-    BLACK = (0, 0, 0)
-
-    TWILIGHT = (0.26, 0.22, 0.8)
 
 
 class Point:
@@ -165,116 +154,124 @@ class Transform:
 class Object3D(ABC):
 
     def __init__(self, transform=None):
-        self.shader = None
-
         if transform is None:
             self.transform = Transform()
+
+        self.material = None
 
         self.vertexes = self.set_verts()
         self.edges = self.set_edges()
         self.surfaces = self.set_surfs()
+
         self.normals = self.calc_normals()
         # color = (lambda: Color.GREEN if vertex % 2 == 0 else Color.RED if vertex % 3 == 0 else Color.BLUE)()
         self.colors = np.array([Color.TWILIGHT] * len(self.vertexes))
 
-    def _compile_shader(self):
-        VERTEX_SHADER = load_file("vertex_shader.vsh")
-        FRAGMENT_SHADER = load_file("fragment_shader.fsh")
-
-        compiled_vertex_shader = shaders.compileShader(VERTEX_SHADER, GL_VERTEX_SHADER)
-        compiled_fragment_shader = shaders.compileShader(FRAGMENT_SHADER, GL_FRAGMENT_SHADER)
-
-        shader = shaders.compileProgram(compiled_vertex_shader, compiled_fragment_shader)
-
-        # vertexes = np.array([p.to_list() for p in self.get_verts()], dtype=np.float32)
-        vertexes = np.array([p.to_list() + [0, 0, 0] for p in self.set_verts()], dtype=np.float32)
-        # normals = self.get_verts_normals()
-
-        # vbo = np.append(vertexes, normals, axis=1)
-
-        self.vbo = vbo.VBO(vertexes)
-
-        # get memory locations for
-        # shader uniform variables
-        uniform_values = (
-            'Global_ambient',
-            'Light_ambient',
-            'Light_diffuse',
-            'Light_location',
-            'Material_ambient',
-            'Material_diffuse'
-        )
-        for uniform in uniform_values:
-            location = glGetUniformLocation(shader, uniform)
-            if location in (None, -1):
-                print('Warning, no uniform {}'.format(uniform))
-            else:
-                set_attrib = uniform + '_loc'
-                setattr(self, set_attrib, location)
-
-        # get the memory locations for
-        # shader attribute variables
-        attribute_values = (
-            'Vertex_position'
-            , 'Vertex_normal'
-        )
-        for attribute in attribute_values:
-            location = glGetAttribLocation(shader, attribute)
-            if location in (None, -1):
-                print('Warning, no attribute {}'.format(attribute))
-            else:
-                set_attrib = attribute + '_loc'
-                setattr(self, set_attrib, location)
-
-        return shader
-
     def apply_material(self):
+        """
+        shader rendering
+        :return:
+        """
+
+        if self.material is None:
+            return False
 
         if len(self.set_surfs()) == 0:
-            return
+            return False
 
-        self.shader = self._compile_shader()
-        glUseProgram(self.shader)
+        # vertexes = np.array([p.to_list() for p in self.get_verts()], dtype=np.float32)
+        vertexes = np.array([p.to_list() for p in self.vertexes], dtype=np.float32)
+        normals = np.array(self.normals, dtype=np.float32)
+        colors = np.array(self.colors, dtype=np.float32)
+
+        vert_data = np.append(vertexes, normals, axis=1)
+        vert_data = np.append(vert_data, colors, axis=1)
+        #vert_data = vertexes
+
+        self.vbo = vbo.VBO(vert_data)
+
+        glUseProgram(self.material.shader)
+
         try:
             self.vbo.bind()
             try:
                 # use the memory locations we found earlier (now python attributes
                 # on the current class) for shader variables and put data into
                 # the shader variables
-                glUniform4f(self.Global_ambient_loc, .3, .05, .05, .1)
-                glUniform4f(self.Light_ambient_loc, .2, .2, .2, 1.0)
-                glUniform4f(self.Light_diffuse_loc, 1, 1, 1, 1)
-                glUniform3f(self.Light_location_loc, 2, 2, 10)
-                glUniform4f(self.Material_ambient_loc, .2, .2, .2, 1.0)
-                glUniform4f(self.Material_diffuse_loc, 1, 1, 1, 1)
+                glUniform4f(self.material.Global_ambient_loc, .3, .05, .05, .1)
+                glUniform4f(self.material.Light_ambient_loc, .2, .2, .2, 1.0)
+                glUniform4f(self.material.Light_diffuse_loc, 1, 1, 1, 1)
+                glUniform3f(self.material.Light_location_loc, 2, 2, 10)
+                glUniform4f(self.material.Material_ambient_loc, .2, .2, .2, 1.0)
+                glUniform4f(self.material.Material_diffuse_loc, 1, 1, 1, 1)
 
-                glEnableVertexAttribArray(self.Vertex_position_loc)
-                glEnableVertexAttribArray(self.Vertex_normal_loc)
+                # vbo
+                glEnableClientState(GL_VERTEX_ARRAY)
+                glEnableClientState(GL_NORMAL_ARRAY)
+                glEnableClientState(GL_COLOR_ARRAY)
+                glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0)
 
-                # reference our vertex data and normals data
-                stride = 6 * 4
-                glVertexAttribPointer(
-                    self.Vertex_position_loc,
-                    3, GL_FLOAT, False, stride, self.vbo
-                )
-                glVertexAttribPointer(
-                    self.Vertex_normal_loc,
-                    3, GL_FLOAT, False, stride, self.vbo + 12
-                )
+                v_pointer = ctypes.c_void_p(0)  # or None
+                n_pointer = ctypes.c_void_p(12)
+                c_pointer = ctypes.c_void_p(24)
 
-                trns_count = len(self.set_surfs())
+                v_stride = 36
+                n_stride = 36
+                c_stride = 36
 
-                glDrawArrays(GL_TRIANGLES, 0, trns_count)
+                glVertexPointer(3,
+                                GL_FLOAT,
+                                v_stride,
+                                v_pointer)
+                glNormalPointer(GL_FLOAT,
+                                n_stride,
+                                n_pointer)
+                glColorPointer(3,
+                               GL_FLOAT,
+                               c_stride,
+                               c_pointer)
+
+                surfaces_count = len(self.surfaces)
+
+                glDrawArrays(GL_TRIANGLES, 0, surfaces_count)
+
+                # glEnableVertexAttribArray(self.material.Vertex_position_loc)
+                # glEnableVertexAttribArray(self.material.Vertex_normal_loc)
+                #
+                # # reference our vertex data and normals data
+                # # 3 float32 values - vertex
+                # # 3 float32 values - normal
+                # stride = 3 * 2 * 4
+                # glVertexAttribPointer(
+                #     self.material.Vertex_position_loc,
+                #     3, GL_FLOAT, False, stride, VBO
+                # )
+                # glVertexAttribPointer(
+                #     self.material.Vertex_normal_loc,
+                #     3, GL_FLOAT, False, stride, VBO + 12
+                # )
+                #
+                # surfaces_count = len(self.surfaces)
+                #
+                # glDrawArrays(GL_TRIANGLES, 0, surfaces_count)
+
             finally:
                 self.vbo.unbind()
-                glDisableVertexAttribArray(self.Vertex_position_loc)
-                glDisableVertexAttribArray(self.Vertex_normal_loc)
+
+                glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0)  # reset
+                glDisableClientState(GL_COLOR_ARRAY)
+                glDisableClientState(GL_NORMAL_ARRAY)
+                glDisableClientState(GL_VERTEX_ARRAY)
+
+                # glDisableVertexAttribArray(self.material.Vertex_position_loc)
+                # glDisableVertexAttribArray(self.material.Vertex_normal_loc)
         finally:
             glUseProgram(0)
 
+
     def calc_normals(self):
         """
-        normal vectors for each vertex
+        normal vector for each vertex
         :return:
         """
         surfs = self.surfaces
@@ -452,14 +449,14 @@ class Cube3D(Object3D):
 
 class Composed:
 
-    def set_material_all(self):
-        for o in self.objects:
-            o.set_material()
-
-    def __init__(self, objects: list[Object3D] | np.ndarray = []):
+    def __init__(self, objects: list[Object3D] | np.ndarray):
         self.transform = Transform()
         self.objects = objects
 
     def draw_all(self):
         for o in self.objects:
             o.draw(self.transform)
+
+    def set_material_all(self, material):
+        for o in self.objects:
+            o.material = material

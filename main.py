@@ -11,6 +11,7 @@ from OpenGL.arrays import vbo
 
 from curves import *
 from geometrix import Cube3D, Composed
+from lightning import BRDF
 from misc import load_file
 
 # surface quality
@@ -87,6 +88,13 @@ def main():
 
     light_cube.transform.position[1] = 1
 
+    # materials
+
+    mat = BRDF()
+
+    bsSurface.set_material_all(mat)
+    light_cube.material = mat
+
     while True:
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
@@ -115,7 +123,7 @@ def main():
 
         bsSurface.draw_all()
         # bsCurves.draw_all()
-        light_cube.draw()
+        #light_cube.draw()
 
         # anim
         anim_curve.draw()
