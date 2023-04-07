@@ -5,7 +5,7 @@ from OpenGL.GL import *
 
 from misc import load_file
 
-# default shader
+# default shaders
 VERTEX_SHADER = load_file("vertex_shader.vsh")
 FRAGMENT_SHADER = load_file("fragment_shader.fsh")
 
@@ -51,8 +51,8 @@ class MaterialBase(ABC):
 
 class BRDF(MaterialBase):
     def __init__(self):
-        vertex_sh = load_file("vertex_shader.vsh")
-        fragment_sh = load_file("fragment_shader.fsh")
+        vertex_sh = load_file("brdf.vsh")
+        fragment_sh = load_file("brdf.fsh")
 
         super(BRDF, self).__init__(vertex_sh, fragment_sh, Color.MINT)
 

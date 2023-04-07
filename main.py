@@ -123,7 +123,7 @@ def main():
 
         bsSurface.draw_all()
         # bsCurves.draw_all()
-        #light_cube.draw()
+        light_cube.draw()
 
         # anim
         anim_curve.draw()

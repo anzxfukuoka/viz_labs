@@ -180,20 +180,35 @@ class Object3D(ABC):
             return False
 
         # vertexes = np.array([p.to_list() for p in self.get_verts()], dtype=np.float32)
+
         vertexes = np.array([p.to_list() for p in self.vertexes], dtype=np.float32)
-        normals = np.array(self.normals, dtype=np.float32)
-        colors = np.array(self.colors, dtype=np.float32)
+        normals = np.array([np.append(n, 1) for n in self.normals], dtype=np.float32)
+        colors = np.array([np.append(c, 1) for c in self.colors], dtype=np.float32)
 
-        vert_data = np.append(vertexes, normals, axis=1)
-        vert_data = np.append(vert_data, colors, axis=1)
-        #vert_data = vertexes
+        indexes = np.array(self.surfaces, dtype=np.uint32).flatten()
 
-        self.vbo = vbo.VBO(vert_data)
+        VAO = glGenVertexArrays(1)
+        VBO = glGenBuffers(1)
+        EBO = glGenBuffers(1)
+
+        glBindVertexArray(VAO)
+
+        glBindBuffer(GL_ARRAY_BUFFER, VBO)
+        glBufferData(GL_ARRAY_BUFFER, vertexes, GL_STATIC_DRAW)
+
+        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO)
+        glBufferData(GL_ELEMENT_ARRAY_BUFFER, indexes, GL_STATIC_DRAW)
+
+        glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, None)
+        glEnableVertexAttribArray(0)
+
+        glBindBuffer(GL_ARRAY_BUFFER, 0)
+        glBindVertexArray(0)
 
         glUseProgram(self.material.shader)
 
         try:
-            self.vbo.bind()
+
             try:
                 # use the memory locations we found earlier (now python attributes
                 # on the current class) for shader variables and put data into
@@ -205,35 +220,8 @@ class Object3D(ABC):
                 glUniform4f(self.material.Material_ambient_loc, .2, .2, .2, 1.0)
                 glUniform4f(self.material.Material_diffuse_loc, 1, 1, 1, 1)
 
-                # vbo
-                glEnableClientState(GL_VERTEX_ARRAY)
-                glEnableClientState(GL_NORMAL_ARRAY)
-                glEnableClientState(GL_COLOR_ARRAY)
-                glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0)
-
-                v_pointer = ctypes.c_void_p(0)  # or None
-                n_pointer = ctypes.c_void_p(12)
-                c_pointer = ctypes.c_void_p(24)
-
-                v_stride = 36
-                n_stride = 36
-                c_stride = 36
-
-                glVertexPointer(3,
-                                GL_FLOAT,
-                                v_stride,
-                                v_pointer)
-                glNormalPointer(GL_FLOAT,
-                                n_stride,
-                                n_pointer)
-                glColorPointer(3,
-                               GL_FLOAT,
-                               c_stride,
-                               c_pointer)
-
-                surfaces_count = len(self.surfaces)
-
-                glDrawArrays(GL_TRIANGLES, 0, surfaces_count)
+                glBindVertexArray(VAO)
+                glDrawElements(GL_TRIANGLES, len(indexes), GL_UNSIGNED_INT, None)
 
                 # glEnableVertexAttribArray(self.material.Vertex_position_loc)
                 # glEnableVertexAttribArray(self.material.Vertex_normal_loc)
@@ -254,9 +242,11 @@ class Object3D(ABC):
                 # surfaces_count = len(self.surfaces)
                 #
                 # glDrawArrays(GL_TRIANGLES, 0, surfaces_count)
+            except:
+                pass
 
             finally:
-                self.vbo.unbind()
+                #self.vbo.unbind()
 
                 glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0)  # reset
                 glDisableClientState(GL_COLOR_ARRAY)
