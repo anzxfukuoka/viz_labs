@@ -1,3 +1,5 @@
+import math
+
 import pygame
 from pygame.locals import *
 
@@ -32,13 +34,21 @@ bs2 = BezierSurface([bz2, bz_mid2, bz4], last=True, quality=qul)
 
 # mirrored
 bs3 = BezierSurface([bz, bz_mid, bz3], last=True, quality=qul)
-bs3.size = Point(-1, 1, 1)
+bs3.transform.size = [-1, 1, 1]
 bs4 = BezierSurface([bz2, bz_mid2, bz4], last=True, quality=qul)
-bs4.size = Point(-1, 1, 1)
+bs4.transform.size = [-1, 1, 1]
 
 # composed objects
 bsCurves = Composed([bz, bz2, bz3, bz4])
 bsSurface = Composed([bs1, bs2, bs3, bs4])
+
+# misc
+
+light_cube = Cube3D()
+
+anim_curve = BezierCurve([Point(0, -4, 0), Point(2, 0, 2), Point(3, 2, 4)], quality=qul)
+
+time = 0
 
 def main():
     pygame.init()
@@ -46,14 +56,13 @@ def main():
 
     pygame.display.set_mode(display, DOUBLEBUF | OPENGL)
 
-
     glMatrixMode(GL_PROJECTION)
 
-    #glEnable(GL_LIGHTING)
+    glEnable(GL_LIGHTING)
     glEnable(GL_COLOR_MATERIAL)
 
     glEnable(GL_LIGHT0)
-    glLightfv(GL_LIGHT0, GL_POSITION, [0, 0, 1])
+    glLightfv(GL_LIGHT0, GL_POSITION, [10, 10, 10])
 
     # perspective
     glEnable(GL_DEPTH_TEST)
@@ -62,17 +71,21 @@ def main():
     glTranslatef(0.0, -6, -20)
 
     # orth
-    #gluOrtho2D(-1, 1, -1, 1)
-    #glScalef(0.1, 0.1, 0.1)
+    # gluOrtho2D(-1, 1, -1, 1)
+    # glScalef(0.1, 0.1, 0.1)
 
     glRotatef(-90, 1, 0, 0)
-    #bsSurface.transform.rotation[2] = -90
+    # bsSurface.transform.rotation[2] = -90
 
-    #bsSurface.set_material_all()
+    # bsSurface.set_material_all()
 
     x_axis = 0
     y_axis = 0
     speed = 10
+
+    anim_speed = 0.001
+
+    light_cube.transform.position[1] = 1
 
     while True:
         for event in pygame.event.get():
@@ -84,22 +97,30 @@ def main():
         x_axis = (keys[pygame.K_RIGHT] - keys[pygame.K_LEFT]) * speed
         y_axis = (keys[pygame.K_DOWN] - keys[pygame.K_UP]) * speed
 
-        #print(x_axis, y_axis)
+        # print(x_axis, y_axis)
 
-        #glRotatef(x_axis, 0, 0, 1)
-        #glRotatef(y_axis, 1, 0, 0)
+        glRotatef(x_axis, 0, 0, 1)
+        # glRotatef(y_axis, 1, 0, 0)
 
-        bsSurface.transform.rotation[2] += x_axis
-        bsSurface.transform.position[0] += y_axis * 0.1
+        # bsSurface.transform.rotation[2] += x_axis
+        # bsSurface.transform.position[0] += y_axis * 0.1
 
         # glTranslatef(0, x_axis,  y_axis)
 
-        # draw
+        light_cube.transform.position[2] += y_axis * 0.2
+        glLightfv(GL_LIGHT0, GL_POSITION, light_cube.transform.position)
 
+        # draw
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)
 
         bsSurface.draw_all()
-        #bsCurves.draw_all()
+        # bsCurves.draw_all()
+        light_cube.draw()
+
+        # anim
+        a_pos = anim_curve.B(math.sin(pygame.time.get_ticks() * anim_speed)).to_list()
+
+        bsSurface.transform.position = a_pos
 
         pygame.display.flip()
         pygame.time.wait(10)
