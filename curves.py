@@ -70,8 +70,10 @@ class BezierSurface(Object3D):
                 continue
             edge1 = (i - 1, i)
             edge2 = (i, self.quality + i + 1)
+            edge3 = (i - 1, self.quality + i + 1)
             edges.append(edge1)
             edges.append(edge2)
+            edges.append(edge3)
 
         return edges
 
@@ -90,11 +92,19 @@ class BezierSurface(Object3D):
         for i in range(1, (curves_count - 1) * (self.quality + 1)):
             if i % (self.quality + 1) == 0:
                 continue
-            surf = (i - 1,
+
+            trn1 = (
+                self.quality + i + 1,
+                self.quality + i - 0,
+                i,)
+
+            trn2 = (self.quality + i + 0,
                     i,
-                    self.quality + i + 1,
-                    self.quality + i + 0)
-            surfs.append(surf)
+                    i - 1
+                    )
+
+            surfs.append(trn1)
+            surfs.append(trn2)
 
         return surfs
 

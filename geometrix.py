@@ -134,15 +134,22 @@ class Object3D(ABC):
         edges = self.get_edges()
         surfaces = self.get_surfs()
 
-        glBegin(GL_QUADS)
+        glBegin(GL_TRIANGLES)
         for surface in surfaces:
             x = 0
+
+            ps = np.array([vertexes[p].to_list() for p in surface])
+            v1 = ps[2] - ps[0]
+            v2 = ps[1] - ps[0]
+            norm = np.cross(v1, v2)
+
             for vertex in surface:
                 x += 1
                 # glColor3fv(colors[x])
                 # color = (lambda: Color.GREEN if vertex % 2 == 0 else Color.RED if vertex % 3 == 0 else Color.BLUE)()
                 color = Color.TWILIGHT
                 glColor3fv(color)
+                glNormal(norm[0], norm[1], norm[2])
                 point = self.pos + vertexes[vertex] * self.size
                 glVertex3fv(point.to_list())
         glEnd()
