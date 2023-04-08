@@ -168,6 +168,7 @@ class Object3D(ABC):
         self.normals = self.calc_normals()
         # color = (lambda: Color.GREEN if vertex % 2 == 0 else Color.RED if vertex % 3 == 0 else Color.BLUE)()
         self.colors = np.array([Color.TWILIGHT] * len(self.vertexes))
+        self.tex_coords = self.set_tex_coords()
 
     def apply_material(self):
         """
@@ -189,12 +190,13 @@ class Object3D(ABC):
             vertexes = np.array([self.parent_transform.local_to_global(v) for v in vertexes], dtype=np.float32)
 
         normals = np.array([n for n in self.normals], dtype=np.float32)
-        colors = np.array([c for c in self.colors], dtype=np.float32)
+        #colors = np.array([c for c in self.colors], dtype=np.float32)
+        tex_coords = np.array([t for t in self.tex_coords], dtype=np.float32)
 
         indexes = np.array(self.surfaces, dtype=np.uint32).flatten()
 
         vert_data = np.append(vertexes, normals)
-        vert_data = np.append(vert_data, colors)
+        vert_data = np.append(vert_data, tex_coords)
 
         VAO = glGenVertexArrays(1)
         VBO = glGenBuffers(1)
@@ -225,6 +227,8 @@ class Object3D(ABC):
                 # use the memory locations we found earlier (now python attributes
                 # on the current class) for shader variables and put data into
                 # the shader variables
+
+                #self.material.apply_transform(self.transform)
                 self.material.apply_uniform()
 
                 glBindVertexArray(VAO)
@@ -265,6 +269,9 @@ class Object3D(ABC):
         finally:
             glUseProgram(0)
 
+    @abstractmethod
+    def set_tex_coords(self):
+        return [[i % 3, (i+1) % 3] for i in range(len(self.set_surfs()))]
 
     def calc_normals(self):
         """
@@ -390,6 +397,9 @@ class Cube3D(Object3D):
     """
     Cube primitive object
     """
+
+    def set_tex_coords(self):
+        return [[i % 3, (i+1) % 3] for i in range(len(self.set_surfs()))]
 
     def __init__(self):
         super(Cube3D, self).__init__()

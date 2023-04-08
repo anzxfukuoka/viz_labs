@@ -1,4 +1,4 @@
-#version 120
+#version 130
 // #version 330
 
 uniform vec4 Global_ambient;
@@ -12,7 +12,15 @@ attribute vec3 Vertex_position;
 attribute vec3 Vertex_normal;
 attribute vec3 Vertex_color;
 
+attribute vec2 Tex_coord;
+
+varying vec3 lightDir;
+varying vec3 viewDir;
+varying vec3 normal;
+
 varying vec4 baseColor;
+varying vec2 fragmentTexCoord;
+
 
 float phong_weightCalc(
             in vec3 light_pos,
@@ -55,4 +63,10 @@ float phong_weightCalc(
             //baseColor = vec4(1.0f, 0.0f, 0.0f, 1.0f);
             //baseColor += vec4(Vertex_normal[0], Vertex_normal[1], Vertex_normal[2], 1);
             ///baseColor *= vec4(Vertex_color[0], Vertex_color[1], Vertex_color[2], 0);
+
+            lightDir = EC_Light_location;
+            viewDir = vec3(gl_ModelViewMatrix * gl_Vertex);
+            normal = gl_NormalMatrix * gl_Normal;
+
+            fragmentTexCoord = Tex_coord;
  }

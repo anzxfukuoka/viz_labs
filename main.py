@@ -11,7 +11,7 @@ from OpenGL.arrays import vbo
 
 from curves import *
 from geometrix import Cube3D, Composed
-from lightning import BRDF, DefaultMaterial
+from lightning import BRDF, DefaultMaterial, Glass
 from misc import load_file
 
 # surface quality
@@ -61,6 +61,8 @@ def main():
 
     glEnable(GL_LIGHTING)
     glEnable(GL_COLOR_MATERIAL)
+    glEnable(GL_BLEND)
+    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA)
 
     glEnable(GL_LIGHT0)
     glLightfv(GL_LIGHT0, GL_POSITION, [10, 10, 10])
@@ -90,7 +92,7 @@ def main():
 
     # materials
 
-    surface_mat = BRDF(light_cube.transform.position, [0, 0.4, 0.8, 1])
+    surface_mat = Glass()# BRDF(light_cube.transform.position, [0.8, 0.9, 0.8, 1])
 
     light_cube_mat = BRDF(light_cube.transform.position, [1.0, 0.8, 0.9, 1])
 
@@ -119,7 +121,7 @@ def main():
         # bsSurface.transform.rotation[2] += x_axis
         # bsSurface.transform.position[0] += y_axis * 0.1
 
-        # glTranslatef(0, x_axis,  y_axis)
+        #\ glTranslatef(0, x_axis,  y_axis)
 
         light_cube.transform.position[0] += da_axis * 0.2
         light_cube.transform.position[2] += sw_axis * 0.2
@@ -127,6 +129,7 @@ def main():
 
         # draw
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)
+        glClearColor(0.1, 0.1, 0.1, 1)
 
         bsSurface.draw_all()
         # bsCurves.draw_all()
