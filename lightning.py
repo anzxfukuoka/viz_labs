@@ -143,18 +143,18 @@ class Glass(MaterialBase):
         # get the position from  shader
         glBindAttribLocation(self.shader, 0, 'position')
         #position = glGetAttribLocation(self.shader, 'position')
-        glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 4 * 8, ctypes.c_void_p(0))
+        glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, ctypes.c_void_p(0))
         glEnableVertexAttribArray(0)
 
         # get the color from  shader
         glBindAttribLocation(self.shader, 1, 'color')
         #color = glGetAttribLocation(self.shader, 'color')
-        glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 4 * 8, ctypes.c_void_p(12))
+        glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 0, ctypes.c_void_p(12))
         glEnableVertexAttribArray(1)
 
         glBindAttribLocation(self.shader, 2, 'InTexCoords')
         #texCoords = glGetAttribLocation(self.shader, "InTexCoords")
-        glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, 4 * 8, ctypes.c_void_p(24))
+        glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, 0, ctypes.c_void_p(24))
         glEnableVertexAttribArray(2)
 
         # VBO
