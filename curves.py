@@ -66,7 +66,9 @@ class BezierCurve(Object3D):
 class BezierSurface(Object3D):
 
     def set_tex_coords(self):
-        return [[i % 3, (i+1) % 3] for i in range(len(self.set_surfs()))]
+        coords = [[i % self.quality, (len(self.vertexes) - i) % self.quality] for i in range(len(self.vertexes))]
+        coords = np.array(coords) / len(self.vertexes)
+        return coords
 
     def set_edges(self):
         curves_count = len(self.secondary_curves)

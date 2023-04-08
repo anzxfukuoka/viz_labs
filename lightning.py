@@ -114,31 +114,9 @@ class Glass(MaterialBase):
 
     def apply_uniform(self):
         glUniform1i(glGetUniformLocation(self.shader, "imageTexture"), 0)
-
-        # projection_transform = pyrr.matrix44.create_perspective_projection(
-        #     fovy=90, aspect=800 / 600,
-        #     near=0.001, far=100.0, dtype=np.float32
-        # )
-        #
-        # glUniformMatrix4fv(
-        #     glGetUniformLocation(self.shader, "projection"),
-        #     1, GL_FALSE, projection_transform
-        # )
-        # self.modelMatrixLocation = glGetUniformLocation(self.shader, "model")
         pass
 
     def apply_attrs(self):
-
-        # glEnableVertexAttribArray(self.Vertex_position_loc)
-        # glEnableVertexAttribArray(self.Vertex_normal_loc)
-        # glEnableVertexAttribArray(self.Tex_coord_loc)
-        #
-        # glVertexAttribPointer(self.Vertex_position_loc,
-        #                       3, GL_FLOAT, GL_FALSE, 0, None)
-        # glVertexAttribPointer(self.Vertex_normal_loc,
-        #                       3, GL_FLOAT, GL_FALSE, 0, None)
-        # glVertexAttribPointer(self.Tex_coord_loc,
-        #                       2, GL_FLOAT, GL_FALSE, 0, None)
 
         # get the position from  shader
         glBindAttribLocation(self.shader, 0, 'position')
@@ -157,31 +135,9 @@ class Glass(MaterialBase):
         glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, 0, ctypes.c_void_p(24))
         glEnableVertexAttribArray(2)
 
-        # VBO
-
-        # glEnableVertexAttribArray(self.Vertex_position_loc)
-        # glVertexAttribPointer(self.Vertex_position_loc,
-        #                       3, GL_FLOAT, GL_FALSE, 32, ctypes.c_void_p(0))
-        #
-        # glEnableVertexAttribArray(self.Vertex_normal_loc)
-        # glVertexAttribPointer(self.Vertex_normal_loc,
-        #                       3, GL_FLOAT, GL_FALSE, 32, ctypes.c_void_p(12))
-        #
-        # glEnableVertexAttribArray(self.Tex_coord_loc)
-        # glVertexAttribPointer(self.Tex_coord_loc,
-        #                       2, GL_FLOAT, GL_FALSE, 32, ctypes.c_void_p(24))
-
 
 
     def define_attrs(self):
-
-        # self.Vertex_position_loc = 0
-        # self.Vertex_normal_loc = 1
-        # self.Tex_coord_loc = 2
-        #
-        # glBindAttribLocation(self.shader, self.Vertex_position_loc, "Vertex_position")
-        # glBindAttribLocation(self.shader, self.Vertex_normal_loc, "Vertex_normal")
-        # glBindAttribLocation(self.shader, self.Tex_coord_loc, "Tex_coord")
         pass
 
 

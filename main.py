@@ -92,6 +92,7 @@ def main():
 
     # materials
 
+    #surface_mat = BRDF(light_cube.transform.position, [0.8, 0.9, 0.8, 1])
     surface_mat = Glass()# BRDF(light_cube.transform.position, [0.8, 0.9, 0.8, 1])
 
     light_cube_mat = BRDF(light_cube.transform.position, [1.0, 0.8, 0.9, 1])
