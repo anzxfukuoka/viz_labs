@@ -27,9 +27,7 @@ class Color:
 
 class MaterialBase(ABC):
 
-    @abstractmethod
-    def __init__(self, vertex_shader, fragment_shader, color=Color.SILVER):
-        self.color = color
+    def __init__(self, vertex_shader, fragment_shader):
         self.vertex_shader = vertex_shader
         self.fragment_shader = fragment_shader
 
@@ -45,27 +43,75 @@ class MaterialBase(ABC):
         return compiled_shader
 
     @abstractmethod
+    def apply_uniform(self):
+        pass
+
+    @abstractmethod
+    def apply_attrs(self):
+        pass
+
+    @abstractmethod
     def define_attrs(self):
         pass
 
 
+class DefaultMaterial(MaterialBase):
+    def apply_attrs(self):
+        pass
+
+    def apply_uniform(self):
+        glUniform4f(self.Color_Main_loc, self.color_main[0], self.color_main[1], self.color_main[2], self.color_main[3])
+
+    def define_attrs(self):
+        # shader uniform
+        self.Color_Main_loc = glGetUniformLocation(self.shader, "Color_Main")
+
+    def __init__(self, color_main):
+        vertex_sh = VERTEX_SHADER
+        fragment_sh = FRAGMENT_SHADER
+
+        self.color_main = color_main
+
+        super(DefaultMaterial, self).__init__(vertex_sh, fragment_sh)
+
+
 class BRDF(MaterialBase):
-    def __init__(self):
+    def apply_attrs(self):
+        glEnableVertexAttribArray(self.Vertex_position_loc)
+        glEnableVertexAttribArray(self.Vertex_normal_loc)
+
+        glVertexAttribPointer(self.Vertex_position_loc,
+                              3, GL_FLOAT, GL_FALSE, 0, None)
+        glVertexAttribPointer(self.Vertex_normal_loc,
+                              3, GL_FLOAT, GL_FALSE, 0, None)
+
+    def __init__(self, light_pos, color_main):
         vertex_sh = load_file("brdf.vsh")
         fragment_sh = load_file("brdf.fsh")
 
-        super(BRDF, self).__init__(vertex_sh, fragment_sh, Color.MINT)
+        self.light_pos = light_pos
+        self.color = color_main
+
+        super(BRDF, self).__init__(vertex_sh, fragment_sh)
+
+    def apply_uniform(self):
+        glUniform4f(self.Global_ambient_loc, .0, .6, .6, .1)
+        glUniform4f(self.Light_ambient_loc, .2, .2, .2, 1.0)
+        glUniform4f(self.Light_diffuse_loc, 1, 0.8, 0.9, 1)
+        glUniform3f(self.Light_location_loc, self.light_pos[0], self.light_pos[1], self.light_pos[2])
+        glUniform4f(self.Material_ambient_loc, .2, .2, .2, 1.0)
+        glUniform4f(self.Material_diffuse_loc, self.color[0], self.color[1], self.color[2], self.color[3])
 
     def define_attrs(self):
         # get memory locations for
         # shader uniform variables
         uniform_values = (
-            'Global_ambient',
-            'Light_ambient',
-            'Light_diffuse',
-            'Light_location',
-            'Material_ambient',
-            'Material_diffuse'
+            "Global_ambient",
+            "Light_ambient",
+            "Light_diffuse",
+            "Light_location",
+            "Material_ambient",
+            "Material_diffuse",
         )
         for uniform in uniform_values:
             location = glGetUniformLocation(self.shader, uniform)

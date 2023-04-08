@@ -7,9 +7,11 @@ uniform vec4 Light_diffuse;
 uniform vec3 Light_location;
 uniform vec4 Material_ambient;
 uniform vec4 Material_diffuse;
+
 attribute vec3 Vertex_position;
 attribute vec3 Vertex_normal;
 attribute vec3 Vertex_color;
+
 varying vec4 baseColor;
 
 float phong_weightCalc(
@@ -51,6 +53,6 @@ float phong_weightCalc(
             +(Light_diffuse * Material_diffuse * diffuse_weight)
             ), 0.0, 1.0);
             //baseColor = vec4(1.0f, 0.0f, 0.0f, 1.0f);
-            baseColor += vec4(Vertex_normal[0], Vertex_normal[1], Vertex_normal[2], 1);
+            //baseColor += vec4(Vertex_normal[0], Vertex_normal[1], Vertex_normal[2], 1);
             ///baseColor *= vec4(Vertex_color[0], Vertex_color[1], Vertex_color[2], 0);
  }

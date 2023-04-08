@@ -178,7 +178,7 @@ class Object3D(ABC):
         if self.material is None:
             return False
 
-        if len(self.set_surfs()) == 0:
+        if len(self.surfaces) == 0:
             return False
 
         # vertexes = np.array([p.to_list() for p in self.get_verts()], dtype=np.float32)
@@ -212,13 +212,7 @@ class Object3D(ABC):
         #glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, None)
         #glEnableVertexAttribArray(0)
 
-        glEnableVertexAttribArray(self.material.Vertex_position_loc)
-        glEnableVertexAttribArray(self.material.Vertex_normal_loc)
-
-        glVertexAttribPointer(self.material.Vertex_position_loc,
-                              3, GL_FLOAT, GL_FALSE, 0, None)
-        glVertexAttribPointer(self.material.Vertex_normal_loc,
-                              3, GL_FLOAT, GL_FALSE, 0, None)
+        self.material.apply_attrs()
 
         glBindBuffer(GL_ARRAY_BUFFER, 0)
         glBindVertexArray(0)
@@ -231,12 +225,7 @@ class Object3D(ABC):
                 # use the memory locations we found earlier (now python attributes
                 # on the current class) for shader variables and put data into
                 # the shader variables
-                glUniform4f(self.material.Global_ambient_loc, .05, .1, .05, .1)
-                glUniform4f(self.material.Light_ambient_loc, .2, .2, .2, 1.0)
-                glUniform4f(self.material.Light_diffuse_loc, 1, 1, 1, 1)
-                glUniform3f(self.material.Light_location_loc, 2, 2, 10)
-                glUniform4f(self.material.Material_ambient_loc, .2, .2, .2, 1.0)
-                glUniform4f(self.material.Material_diffuse_loc, 1, 1, 1, 1)
+                self.material.apply_uniform()
 
                 glBindVertexArray(VAO)
                 glDrawElements(GL_TRIANGLES, len(indexes), GL_UNSIGNED_INT, None)
@@ -335,6 +324,7 @@ class Object3D(ABC):
 
     def draw(self, draw_warframe=False):
 
+        #print(type(self.material))
         self.apply_material()
 
         return

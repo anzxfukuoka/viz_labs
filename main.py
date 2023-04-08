@@ -11,7 +11,7 @@ from OpenGL.arrays import vbo
 
 from curves import *
 from geometrix import Cube3D, Composed
-from lightning import BRDF
+from lightning import BRDF, DefaultMaterial
 from misc import load_file
 
 # surface quality
@@ -82,7 +82,7 @@ def main():
 
     x_axis = 0
     y_axis = 0
-    speed = 10
+    speed = 1
 
     anim_speed = 0.001
 
@@ -90,10 +90,12 @@ def main():
 
     # materials
 
-    mat = BRDF()
+    surface_mat = BRDF(light_cube.transform.position, [0, 0.4, 0.8, 1])
 
-    bsSurface.set_material_all(mat)
-    light_cube.material = mat
+    light_cube_mat = BRDF(light_cube.transform.position, [1.0, 0.8, 0.9, 1])
+
+    bsSurface.set_material_all(surface_mat)
+    light_cube.material = light_cube_mat
 
     while True:
         for event in pygame.event.get():
@@ -102,20 +104,25 @@ def main():
                 quit()
 
         keys = pygame.key.get_pressed()
+
         x_axis = (keys[pygame.K_RIGHT] - keys[pygame.K_LEFT]) * speed
         y_axis = (keys[pygame.K_DOWN] - keys[pygame.K_UP]) * speed
+
+        da_axis = (keys[pygame.K_d] - keys[pygame.K_a]) * speed
+        sw_axis = (keys[pygame.K_w] - keys[pygame.K_s]) * speed
 
         # print(x_axis, y_axis)
 
         glRotatef(x_axis, 0, 0, 1)
-        # glRotatef(y_axis, 1, 0, 0)
+        glRotatef(y_axis, 1, 0, 0)
 
         # bsSurface.transform.rotation[2] += x_axis
         # bsSurface.transform.position[0] += y_axis * 0.1
 
         # glTranslatef(0, x_axis,  y_axis)
 
-        light_cube.transform.position[2] += y_axis * 0.2
+        light_cube.transform.position[0] += da_axis * 0.2
+        light_cube.transform.position[2] += sw_axis * 0.2
         glLightfv(GL_LIGHT0, GL_POSITION, light_cube.transform.position)
 
         # draw
